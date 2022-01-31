@@ -155,7 +155,10 @@ tree = WB_search("ginni gni gdp wage salary inflation|male female youth school c
 
 
 # %%
-tree2 = WB_search("ginni gni gdp|male female youth school children maternal teacher young old education", exclude=True, sourcel=['2','6','81'])
+# tree2 = WB_search("ginni gni gdp|male female youth school children maternal teacher young old education", exclude=True, source=['2','6','81'])
+tree2 = WB_search("ginni gni gdp|male female youth school children maternal teacher young old education", exclude=True, )
+
+
 
 # %%
 import sys
@@ -174,7 +177,7 @@ terminal = pn.widgets.Terminal(
 terminal
 # %%
 6.0.GNIpc
-
+# %%
 #strip id value from dict from df.source and put into column
 def get_id_value(df):
     df['id'] = df['source'].apply(lambda x: x['id'])
@@ -189,47 +192,51 @@ desired_categories = ["2","6","15","24","27","32","60","70","81","83"]
 # %%
 drop_data(tree, desired_categories)
 # %%
-refined_df = drop_data(tree, desired_categories)
+refined_df = drop_data(tree2, desired_categories)
 # %%
 #save dataframe
 refined_df.to_csv('refined_df.csv')
 # %%
 # the next part involved exporting to excel and reimporting ashortend version from a highlighted copy to pandas dataframe
 
-df5 = pd.read_excel('refined_df2.xlsx', sheet_name='Sheet1')
+df5 = pd.read_excel('/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/refined_df2.xlsx', sheet_name='Sheet1')
 df5 = df5.drop([1])
 # %%
 
 testdf= WB_get('NY.GNP.ATLS.CD', date='1900:2020',per_page=20000)
+# %%
+import glob
 
 
 # %%
 #get and save dataframes with WB_get where the indicator is a list of indicators
-def get_data(listofindicators, date='1900:2020', per_page=20000):
+def get_data(listofindicators, date='1900:2020', per_page=20000, path='./'):
     from IPython.core.display import display, HTML
     
     for i, indicator in enumerate(listofindicators):
         try:
             tempdf = WB_get(indicator, date=date, per_page=per_page)
             if i < 10:
-                tempdf.to_csv(f'Data/0{i}.csv')
+                tempdf.to_csv(f'{path}/0{i}.csv')
                 print(f"{i}.  {indicator} saved\n") 
                 
             else:
-                tempdf.to_csv(f'Data/{i}.csv')
+                tempdf.to_csv(f'{path}{i}.csv')
                 print(f"{i}.  {indicator} save\n")
         except:
             print(f"{i}.  ----Exception!!! {indicator} failed to save") 
             display(HTML('<h1>Missing Data!! Check indicator</h>'))
             print(f"\n")
-            
-   
-# %%
-        
-    r
+    
+    temp_list = glob.glob(f'{path}*.csv')
+    new_list = [x.replace(path, '') for x in temp_list]
+    info_dataframe = pd.DataFrame(zip(new_list, list(df5['sourceNote'])), columns=['file', 'description'])
+    print(info_dataframe)
+    return info_dataframe
+
 # %%
 
-get_data(df5['id'], date='1900:2020', per_page=20000)
+info_dataframe = get_data(df5['id'], date='1900:2020', per_page=20000, path='/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data/')
 
 # %%
 import dtale
@@ -372,17 +379,23 @@ def single_chart(df,referencedf,i):
                   color='countryiso3code',
                   title=referencedf.name[i]
                   )
-    fig.show()
-# %%
-def create_charts(reference_df, dffolder,chart_type='line'):
     
+    if i < 10 :
+            fig.write_image(f"images/0{i}.png")
+    else:
+            fig.write_image(f"images/{i}.png")
+    fig.show()
+  
+
+    
+def create_charts(reference_df, dffolder,chart_type='line'):
     file_list = glob.glob(dffolder + '/*.csv')
     for x, file in enumerate(file_list):
         print(file)
         df = pd.read_csv(file)
-        # print(df.head(5))
         try:
-            single_chart(df, reference_df,x)
+            chart = single_chart(df, reference_df, x)
+            
         except:
             print('failed to create chart for file: ' + file)
            
@@ -394,24 +407,73 @@ reference_df.head(5)
 
 # %%
 create_charts(reference_df, '/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data')
+
 # %%
-reference_df.head(5)
+#take folder of images and display them with a grid via dash_html_components
+def show_images()
+
+
 # %%
 
-chart_data = pd.read_csv('/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data/00.csv')
-chart_data = chart_data[['date', 'value', 'countryiso3code']]
-print(chart_data.head(5))
-chart_data = chart_data.query("""(`countryiso3code` == 'USA') or (`countryiso3code` == 'AUS') or (`countryiso3code` == 'SWZ') or (`countryiso3code` == 'GBR') or (`countryiso3code` == 'CHN')""")
-chart_data = chart_data.dropna()
+show_images('/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/images')
+# %%
+import plotly.express as px
+from jupyter_dash import JupyterDash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
+# Load Data
+df = px.data.tips()
+# Build App
+app = JupyterDash(__name__)
+app.layout = show_images('/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/images')
 
-print(chart_data.head(5))
-fig = px.line(df, x='date', y='value'
-              ,color='countryiso3code',
-            # title=referencedf.name[i]
-                )
-fig.show()
+# # Define callback to update graph
+# @app.callback(
+#     Output('graph', 'figure'),
+#     [Input("colorscale-dropdown", "value")]
+# )
+# def update_figure(colorscale):
+#     return px.scatter(
+#         df, x="total_bill", y="tip", color="size",
+#         color_continuous_scale=colorscale,
+#         render_mode="webgl", title="Tips"
+#     )
+# Run app and display result inline in the notebook
+app.run_server(mode='inline')
 # %%
-len(chart_data)
-# %%
-chart_data.countryiso3code.unique()
-# %%
+import plotly.express as px
+from jupyter_dash import JupyterDash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
+# Load Data
+df = px.data.tips()
+# Build App
+app = JupyterDash(__name__)
+app.layout = html.Div([
+    html.H1("JupyterDash Demo"),
+    dcc.Graph(id='graph'),
+    html.Label([
+        "colorscale",
+        dcc.Dropdown(
+            id='colorscale-dropdown', clearable=False,
+            value='plasma', options=[
+                {'label': c, 'value': c}
+                for c in px.colors.named_colorscales()
+            ])
+    ]),
+])
+# Define callback to update graph
+@app.callback(
+    Output('graph', 'figure'),
+    [Input("colorscale-dropdown", "value")]
+)
+def update_figure(colorscale):
+    return px.scatter(
+        df, x="total_bill", y="tip", color="size",
+        color_continuous_scale=colorscale,
+        render_mode="webgl", title="Tips"
+    )
+# Run app and display result inline in the notebook
+app.run_server(mode='inline')
