@@ -410,7 +410,14 @@ create_charts(reference_df, '/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive
 
 # %%
 #take folder of images and display them with a grid via dash_html_components
-def show_images()
+def show_images(folder_path):
+    import dash_html_components as html
+    import os
+    images = []
+    for filename in os.listdir(folder_path):
+        if filename.endswith(".png"):
+            images.append(html.Img(src=folder_path + filename, style={'width': '100%'}))
+    return images
 
 
 # %%

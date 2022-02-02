@@ -136,13 +136,8 @@ def get_data(listofindicators, date='1900:2020', per_page=20000, path='./'):
     for i, indicator in enumerate(tqdm.tqdm(listofindicators)):
         try:
             tempdf = WB_get(indicator, date=date, per_page=per_page)
-            if i < 10:
-                tempdf.to_csv(f'{path}/0{i}.csv')
-                print(f"{i}.  {indicator} saved\n") 
-                
-            else:
-                tempdf.to_csv(f'{path}{i}.csv')
-                print(f"{i}.  {indicator} save\n")
+            tempdf.to_csv(f'{path}{i}.csv')
+            print(f"{i}.  {indicator} save\n")
         except:
             print(f"{i}.  ----Exception!!! {indicator} failed to save") 
             display(HTML('<h1>Missing Data!! Check indicator</h>'))
@@ -167,7 +162,12 @@ def get_data(listofindicators, date='1900:2020', per_page=20000, path='./'):
             new_list.insert(int(error_),"None")
     info_dataframe = pd.DataFrame(zip(new_list, list(refined_df['sourceNote'])), columns=['file', 'description'])
     print(info_dataframe)
-    return info_dataframe
+    temp_df = pd.DataFrame(refined_df['name'])
+    temp_df = temp_df.reset_index()
+    #merge dataframes
+    merged_df =pd.concat([temp_df,info_dataframe], axis=1)
+    merged_df = merged_df.drop(columns=['index'])
+    return merged_df
 
 # %%
 # new_list = glob.glob('/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data/*.csv')
@@ -185,4 +185,71 @@ def get_data(listofindicators, date='1900:2020', per_page=20000, path='./'):
 # %%
 
 info_dataframe = get_data(refined_df['id'], date='1900:2020', per_page=20000, path='/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data/')
+# %%
+
+
+# %%
+#create simple charts for each file
+
+def single_chart(df,referencedf,i,path="./"):
+    import plotly.express as px
+    # print(df.head(5))
+    chart_data = df
+    chart_data = chart_data[['date', 'value', 'countryiso3code']]
+    chart_data = chart_data.query("""(`countryiso3code` == 'USA') or (`countryiso3code` == 'AUS') or (`countryiso3code` == 'SWZ') or (`countryiso3code` == 'GBR') or (`countryiso3code` == 'CHN')""")
+    chart_data = chart_data.dropna()
+    
+    fig = px.line(chart_data, 
+                  x='date', 
+                  y='value',
+                  color='countryiso3code',
+                  title=referencedf.name[i]
+                  )
+  
+    fig.write_image(f"{path}{i}.png")
+    fig.show()
+  
+
+    
+def create_charts(reference_df, dffolder,chart_type='line',path="./"):
+    # file_list = glob.glob(dffolder + '/*.csv')
+    file_list = [dffolder + x for x in info_dataframe['file']]
+    for x, file in enumerate(file_list):
+        print(file)
+        try:
+            df = pd.read_csv(file)
+        except:
+            # display(HTML('<h1>There is a problem!!!</h>'))
+            print("error")
+        try:
+            chart = single_chart(df, reference_df, x)
+            
+        except:
+           
+            # display(HTML('<h1>There is a problem!!!</h>'))
+            print('failed to create chart for file: ' + file)
+           
+
+# %%
+create_charts(info_dataframe, dffolder='/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data/',path="/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/images/")
+
+
+# %%
+#collect all the charts into one file
+
+# %%
+# Before running this, make sure you have the correct file names in the info_dataframe and save info_dataframe as a csv
+info_dataframe.to_csv(f"/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data/info_dataframe.csv")
+# %%
+#COLLECT ALL CSVS AND  PLACE INTO SQL DATABASE FOR EASY PROCESSING
+#MAKE SURE PYTHON PACKAGE PIP INSTALL CSVS-TO-SQLITE HAS INSTALLED AND WORKS
+
+
+
+# %%
+import os 
+#get working directory
+getcwd()
+# %%
+!csvs-to-sqlite "/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data/" "/media/gyasis/Blade 15 SSD/Users/gyasi/Google Drive (not syncing)/Collection/Inflation/Data/inflation.db"
 # %%
